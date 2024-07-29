@@ -24,7 +24,7 @@ This tool is designed to embed album covers into the metadata of MP3 files speci
 
 1. **Clone the Repository**:
     ```bash
-    git clone https://github.com/yourusername/MECHEN-2.4-MP3-Cover-Embedder.git
+    git clone https://github.com/khansen213/MECHEN-2.4-MP3-Cover-Embedder.git
     ```
 
 2. **Navigate to the Project Directory**:
