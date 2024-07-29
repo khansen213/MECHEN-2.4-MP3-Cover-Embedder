@@ -1,0 +1,647 @@
+
+main.py
+Python
+1. PS C:\Users\[user]\OneDrive - [text]\Documents\Python Fun\Music\edit_metadata>                                                                                                                                                                                   > & C:/Users/[user]/AppData/Local/Programs/Python/Python312/python.exe "c:/Users/[user]/OneDrive - [text]/Documents/Python Fun/Music/edit_metadata/main.py"Exception in Tkinter callbackTraceback (most recent call last):  File "C:\Users\[user]\AppData\Local\Programs\Python\Python312\Lib\tkinter\__init__.py", line 1968, in __call__    return self.func(*args)           ^^^^^^^^^^^^^^^^  File "c:\Users\[user]\OneDrive - [text]\Documents\Python Fun\Music\edit_metadata\main.py", line 541, in start_processing    self.check_for_music_files()  File "c:\Users\[user]\OneDrive - [text]\Documents\Python Fun\Music\edit_metadata\main.py", line 297, in check_for_music_files    self.continue_processing(albums)  File "c:\Users\[user]\OneDrive - [text]\Documents\Python Fun\Music\edit_metadata\main.py", line 628, in continue_processing    self.select_image_window()    ^^^^^^^^^^^^^^^^^^^^^^^^AttributeError: 'MP3AlbumCoverEmbedder' object has no attribute 'select_image_window'
+2. we need each window to know what the previous step was so we can easily go back to where we were before.
+ChatGPT
+The error occurs because the MP3AlbumCoverEmbedder object does not have a method called select_image_window. To resolve this issue, you should define the select_image_window method or ensure that the correct method is being called.
+
+Additionally, you want to ensure that each window knows the previous step, allowing easy navigation back to the prior state. Here is an approach to address both issues:
+
+Define select_image_window Method:
+python
+Copy code
+def select_image_window(self):
+    """
+    Opens a window to select an image file and proceed with the embedding process.
+
+    No Return
+    """
+    cover_image_path = self.select_image()
+    if not cover_image_path:
+        return  # User cancelled the selection or went back
+    self.continue_processing(self.albums, cover_image_path)
+Modify continue_processing Method to Pass Previous State:
+python
+Copy code
+def continue_processing(self, albums, cover_image_path=None):
+    """
+    Continues the process of embedding album covers into MP3 files after checking for music files.
+
+    Parameters:
+    albums: dict - Dictionary of albums with album names as keys and lists of MP3 files as values.
+    cover_image_path: str - Path to the selected cover image file (optional).
+
+    No Return
+    """
+    self.albums = albums  # Save the albums state for navigation
+    if cover_image_path is None:
+        self.select_image_window()
+        return
+
+    album_keys = list(albums.keys())
+    if len(album_keys) >= 15:
+        album_window = Toplevel(self.root)
+        album_window.title("Select Album")
+
+        Label(album_window, text="Select an album by entering the number:").pack(pady=10)
+
+        text_frame = tk.Frame(album_window)
+        text_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+        text_box = Text(text_frame, wrap=tk.WORD, height=15)
+        text_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        scrollbar = Scrollbar(text_frame, command=text_box.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text_box.config(yscrollcommand=scrollbar.set)
+
+        album_str = "\n".join(f"{i+1}. {album}" for i, album in enumerate(album_keys))
+        text_box.insert(END, album_str)
+        text_box.config(state=tk.DISABLED)
+
+        def on_back():
+            """
+            Handles the Back button click event.
+
+            No Return
+            """
+            album_window.destroy()
+            self.select_image_window()
+
+        back_button = Button(album_window, text="Back", command=on_back)
+        back_button.pack(side=tk.LEFT, padx=10, pady=10)
+
+        def on_cancel():
+            """
+            Handles the Cancel button click event.
+
+            No Return
+            """
+            album_window.destroy()
+            self.select_image_window()
+
+        cancel_button = Button(album_window, text="Cancel", command=on_cancel)
+        cancel_button.pack(side=tk.RIGHT, padx=10, pady=10)
+
+        valid_selection = False
+        while not valid_selection:
+            album_index = simpledialog.askinteger("Select Album", "Enter the album number:", parent=album_window)
+
+            if album_index is not None and (1 <= album_index <= len(albums)):
+                valid_selection = True
+            else:
+                messagebox.showwarning("Invalid Selection", "You entered an invalid selection. Please try again.")
+
+        album_window.destroy()
+    else:
+        album_str = "\n".join(f"{i+1}. {album}" for i, album in enumerate(albums.keys()))
+
+        valid_selection = False
+        while not valid_selection:
+            album_index = simpledialog.askinteger("Select Album", f"Select an album by entering the number:\n{album_str}")
+
+            if album_index is not None and (1 <= album_index <= len(albums)):
+                valid_selection = True
+            else:
+                response = self.custom_warning_box("Invalid Selection", "You cancelled the album selection. What would you like to do?")
+                if response == 'try':
+                    continue
+                elif response == 'back':
+                    self.select_image_window()
+                    return
+                elif response == 'quit':
+                    self.root.destroy()
+                    return
+
+    selected_album = album_keys[album_index - 1]
+    mp3_files = albums[selected_album]
+
+    valid_option = False
+    while not valid_option:
+        option = simpledialog.askinteger("Select Option", "Choose an option:\n1. Save image with the same name as the MP3 file\n2. Save image with the album name", initialvalue=2)
+        
+        if option in [1, 2]:
+            valid_option = True
+        else:
+            messagebox.showwarning("Invalid Option", "You entered an invalid option. Please try again.")
+
+    resize = messagebox.askyesno("Resize Image", "Resize cover image to 240x240 for MECHEN 2.4\" screen MP3/MP4 player?")
+
+    self.embed_album_cover(self.mp3_folder, cover_image_path, selected_album, mp3_files, option, resize)
+By defining the select_image_window method and adjusting the continue_processing method to pass the previous state (albums and cover image path), you can navigate back to the previous steps more effectively. This approach ensures that each window knows the previous step and can return to it if needed.
+
+Uploaded image
+1. select option window and resize image window need to have the custom info box pop up like the others, all the buttons do the same thing, back goes to the previous step etc.
+2. why is the details box never accessed? It's supposed to show no matter if an embedded image example is generated or not. It's supposed to show when the embed process is done no matter what. the only things that change is that if an embed wasn't chosen, the copy image example path gives an error saying no embed example was made and same for the open file directly button. the address is replaced by save embed image is set to False. When autosave embed is on. keep in mind we only open the details box is activated, but the program doesn't even allow that right now for some reason. 
+ChatGPT
+To address your requirements, I'll make the following changes:
+
+Modify the Select Option and Resize Image dialogs to use custom information boxes, similar to other dialogs.
+Ensure the details box is shown after the embed process is completed, with appropriate handling for when an embed example is not generated.
+I'll incorporate these changes into your provided code.
+
+1. Custom Info Box for Select Option and Resize Image Dialogs
+First, I'll modify the custom_warning_box method to handle custom dialogs:
+
+python
+Copy code
+def custom_info_box(self, title, message, options):
+    """
+    Displays a custom info box with the provided options.
+
+    Parameters:
+    title: str - Title of the info box.
+    message: str - Message to be displayed in the info box.
+    options: list - List of options for the user to select.
+
+    Return str - The option selected by the user.
+    """
+    info_window = Toplevel(self.root)
+    info_window.title(title)
+    Label(info_window, text=message).pack(pady=10)
+
+    selected_option = tk.StringVar()
+
+    def on_select(option):
+        selected_option.set(option)
+        info_window.destroy()
+
+    for option in options:
+        Button(info_window, text=option, command=lambda opt=option: on_select(opt)).pack(side=tk.LEFT, padx=10, pady=10)
+
+    # Center the info_window on the screen
+    info_window.update_idletasks()
+    width = info_window.winfo_width()
+    height = info_window.winfo_height()
+    x = (info_window.winfo_screenwidth() // 2) - (width // 2)
+    y = (info_window.winfo_screenheight() // 2) - (height // 2)
+    info_window.geometry(f'{width}x{height}+{x}+{y}')
+
+    info_window.focus_set()  # Set focus to the new window
+    info_window.grab_set()  # Ensure the new window stays on top
+
+    self.root.wait_window(info_window)
+    return selected_option.get()
+Next, I'll modify the continue_processing method to use the custom info box:
+
+python
+Copy code
+def continue_processing(self, albums, cover_image_path=None):
+    """
+    Continues the process of embedding album covers into MP3 files after checking for music files.
+
+    Parameters:
+    albums: dict - Dictionary of albums with album names as keys and lists of MP3 files as values.
+    cover_image_path: str - Path to the selected cover image file (optional).
+
+    No Return
+    """
+    self.albums = albums  # Save the albums state for navigation
+    if cover_image_path is None:
+        self.select_image_window()
+        return
+
+    album_keys = list(albums.keys())
+    if len(album_keys) >= 15:
+        album_window = Toplevel(self.root)
+        album_window.title("Select Album")
+
+        Label(album_window, text="Select an album by entering the number:").pack(pady=10)
+
+        text_frame = tk.Frame(album_window)
+        text_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+        text_box = Text(text_frame, wrap=tk.WORD, height=15)
+        text_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        scrollbar = Scrollbar(text_frame, command=text_box.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text_box.config(yscrollcommand=scrollbar.set)
+
+        album_str = "\n".join(f"{i+1}. {album}" for i, album in enumerate(album_keys))
+        text_box.insert(END, album_str)
+        text_box.config(state=tk.DISABLED)
+
+        def on_back():
+            """
+            Handles the Back button click event.
+
+            No Return
+            """
+            album_window.destroy()
+            self.select_image_window()
+
+        back_button = Button(album_window, text="Back", command=on_back)
+        back_button.pack(side=tk.LEFT, padx=10, pady=10)
+
+        def on_cancel():
+            """
+            Handles the Cancel button click event.
+
+            No Return
+            """
+            album_window.destroy()
+            self.select_image_window()
+
+        cancel_button = Button(album_window, text="Cancel", command=on_cancel)
+        cancel_button.pack(side=tk.RIGHT, padx=10, pady=10)
+
+        valid_selection = False
+        while not valid_selection:
+            album_index = simpledialog.askinteger("Select Album", "Enter the album number:", parent=album_window)
+
+            if album_index is not None and (1 <= album_index <= len(albums)):
+                valid_selection = True
+            else:
+                messagebox.showwarning("Invalid Selection", "You entered an invalid selection. Please try again.")
+
+        album_window.destroy()
+    else:
+        album_str = "\n".join(f"{i+1}. {album}" for i, album in enumerate(albums.keys()))
+
+        valid_selection = False
+        while not valid_selection:
+            album_index = simpledialog.askinteger("Select Album", f"Select an album by entering the number:\n{album_str}")
+
+            if album_index is not None and (1 <= album_index <= len(albums)):
+                valid_selection = True
+            else:
+                response = self.custom_warning_box("Invalid Selection", "You cancelled the album selection. What would you like to do?")
+                if response == 'try':
+                    continue
+                elif response == 'back':
+                    self.select_image_window()
+                    return
+                elif response == 'quit':
+                    self.root.destroy()
+                    return
+
+    selected_album = album_keys[album_index - 1]
+    mp3_files = albums[selected_album]
+
+    option = self.custom_info_box(
+        "Select Option",
+        "Choose an option:\n1. Save image with the same name as the MP3 file\n2. Save image with the album name",
+        ["1", "2", "Back", "Quit"]
+    )
+
+    if option == "Back":
+        self.select_image_window()
+        return
+    elif option == "Quit":
+        self.root.destroy()
+        return
+
+    resize = self.custom_info_box(
+        "Resize Image",
+        "Resize cover image to 240x240 for MECHEN 2.4\" screen MP3/MP4 player?",
+        ["Yes", "No", "Back", "Quit"]
+    )
+
+    if resize == "Back":
+        self.select_image_window()
+        return
+    elif resize == "Quit":
+        self.root.destroy()
+        return
+
+    self.embed_album_cover(self.mp3_folder, cover_image_path, selected_album, mp3_files, int(option), resize == "Yes")
+2. Ensure the Details Box is Shown After Embedding
+I'll update the embed_album_cover method to ensure the details box is shown after the embedding process, regardless of whether an embed example was generated:
+
+python
+Copy code
+def embed_album_cover(self, folder: str, cover_image_path: str, album_name: str, mp3_files: list, option: int, resize: bool = False) -> None:
+    """
+    Embeds the cover image into the MP3 files' metadata.
+
+    Parameters:
+    folder: str - Path to the folder containing MP3 files.
+    cover_image_path: str - Path to the cover image file.
+    album_name: str - Name of the album.
+    mp3_files: list - List of MP3 files in the album.
+    option: int - Option for saving the image (1: same name as MP3 file, 2: album name).
+    resize: bool - Whether to resize the cover image.
+
+    No Return
+    """
+    folder = os.path.normpath(folder)  # Normalize the path
+
+    if self.auto_save_embed:
+        album_images_folder = os.path.join(self.embed_folder, f"{album_name.lower()}_image")
+        os.makedirs(album_images_folder, exist_ok=True)
+    else:
+        album_images_folder = ""
+
+    if resize:
+        cover_image = self.resize_cover_image(cover_image_path)
+    else:
+        cover_image = Image.open(cover_image_path).convert("RGB")
+
+    jpeg_image_path = os.path.join(album_images_folder, "cover.jpg") if album_images_folder else None
+    if jpeg_image_path:
+        cover_image.save(jpeg_image_path, format='JPEG')
+
+    with io.BytesIO() as img_bytes:
+        cover_image.save(img_bytes, format='JPEG')
+        cover_data = img_bytes.getvalue()
+
+    updated_files = []
+
+    for mp3_file in mp3_files:
+        mp3_path = os.path.join(folder, mp3_file)
+        try:
+            audio = MP3(mp3_path, ID3=ID3)
+
+            if audio.tags is None:
+                audio.add_tags()
+
+            if 'TALB' in audio:
+                audio.tags['TALB'].encoding = 0
+            if 'TPE1' in audio:
+                audio.tags['TPE1'].encoding = 0
+            if 'TIT2' in audio:
+                audio.tags['TIT2'].encoding = 0
+
+            audio.tags.delall('APIC')
+
+            audio.tags.add(
+                APIC(
+                    encoding=0,
+                    mime='image/jpeg',
+                    type=0,
+                    desc='',
+                    data=cover_data
+                )
+            )
+
+            audio.save()
+            updated_files.append(mp3_path)
+
+        except (ID3Error, IOError, HeaderNotFoundError, ID3NoHeaderError) as e:
+            messagebox.showerror("Error", f"Error updating {mp3_file}: {e}")
+
+    pyperclip.copy(folder)  # Copy the normalized music folder address to the clipboard
+
+    self.show_details_window(updated_files, jpeg_image_path, album_name)
+
+def show_details_window(self, updated_files: list, embed_example_path: str, album_name: str) -> None:
+    """
+    Displays a details window with the list of
+no! use the same custom dialog warning box for the windows that don't access it! Just make them go to the previous step if back is pushed. 
+ChatGPT
+Sure, I'll modify the Select Option and Resize Image dialogs to use the same custom dialog warning box, ensuring they go to the previous step if "Back" is pressed.
+
+Here is the revised code:
+
+Custom Info Box for All Dialogs
+python
+Copy code
+def custom_warning_box(self, title, message, options):
+    """
+    Displays a custom warning box with the provided options.
+
+    Parameters:
+    title: str - Title of the warning box.
+    message: str - Message to be displayed in the warning box.
+    options: list - List of options for the user to select.
+
+    Return str - The option selected by the user.
+    """
+    warning_window = Toplevel(self.root)
+    warning_window.title(title)
+    Label(warning_window, text=message).pack(pady=10)
+
+    selected_option = tk.StringVar()
+
+    def on_select(option):
+        selected_option.set(option)
+        warning_window.destroy()
+
+    for option in options:
+        Button(warning_window, text=option, command=lambda opt=option: on_select(opt)).pack(side=tk.LEFT, padx=10, pady=10)
+
+    # Center the warning_window on the screen
+    warning_window.update_idletasks()
+    width = warning_window.winfo_width()
+    height = warning_window.winfo_height()
+    x = (warning_window.winfo_screenwidth() // 2) - (width // 2)
+    y = (warning_window.winfo_screenheight() // 2) - (height // 2)
+    warning_window.geometry(f'{width}x{height}+{x}+{y}')
+
+    warning_window.focus_set()  # Set focus to the new window
+    warning_window.grab_set()  # Ensure the new window stays on top
+
+    self.root.wait_window(warning_window)
+    return selected_option.get()
+Modifying the continue_processing Method
+python
+Copy code
+def continue_processing(self, albums, cover_image_path=None):
+    """
+    Continues the process of embedding album covers into MP3 files after checking for music files.
+
+    Parameters:
+    albums: dict - Dictionary of albums with album names as keys and lists of MP3 files as values.
+    cover_image_path: str - Path to the selected cover image file (optional).
+
+    No Return
+    """
+    self.albums = albums  # Save the albums state for navigation
+    if cover_image_path is None:
+        self.select_image_window()
+        return
+
+    album_keys = list(albums.keys())
+    if len(album_keys) >= 15:
+        album_window = Toplevel(self.root)
+        album_window.title("Select Album")
+
+        Label(album_window, text="Select an album by entering the number:").pack(pady=10)
+
+        text_frame = tk.Frame(album_window)
+        text_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+        text_box = Text(text_frame, wrap=tk.WORD, height=15)
+        text_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        scrollbar = Scrollbar(text_frame, command=text_box.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text_box.config(yscrollcommand=scrollbar.set)
+
+        album_str = "\n".join(f"{i+1}. {album}" for i, album in enumerate(album_keys))
+        text_box.insert(END, album_str)
+        text_box.config(state=tk.DISABLED)
+
+        def on_back():
+            """
+            Handles the Back button click event.
+
+            No Return
+            """
+            album_window.destroy()
+            self.select_image_window()
+
+        back_button = Button(album_window, text="Back", command=on_back)
+        back_button.pack(side=tk.LEFT, padx=10, pady=10)
+
+        def on_cancel():
+            """
+            Handles the Cancel button click event.
+
+            No Return
+            """
+            album_window.destroy()
+            self.select_image_window()
+
+        cancel_button = Button(album_window, text="Cancel", command=on_cancel)
+        cancel_button.pack(side=tk.RIGHT, padx=10, pady=10)
+
+        valid_selection = False
+        while not valid_selection:
+            album_index = simpledialog.askinteger("Select Album", "Enter the album number:", parent=album_window)
+
+            if album_index is not None and (1 <= album_index <= len(albums)):
+                valid_selection = True
+            else:
+                messagebox.showwarning("Invalid Selection", "You entered an invalid selection. Please try again.")
+
+        album_window.destroy()
+    else:
+        album_str = "\n".join(f"{i+1}. {album}" for i, album in enumerate(albums.keys()))
+
+        valid_selection = False
+        while not valid_selection:
+            album_index = simpledialog.askinteger("Select Album", f"Select an album by entering the number:\n{album_str}")
+
+            if album_index is not None and (1 <= album_index <= len(albums)):
+                valid_selection = True
+            else:
+                response = self.custom_warning_box("Invalid Selection", "You cancelled the album selection. What would you like to do?", ["Try Again", "Back", "Quit"])
+                if response == 'Try Again':
+                    continue
+                elif response == 'Back':
+                    self.select_image_window()
+                    return
+                elif response == 'Quit':
+                    self.root.destroy()
+                    return
+
+    selected_album = album_keys[album_index - 1]
+    mp3_files = albums[selected_album]
+
+    option = self.custom_warning_box(
+        "Select Option",
+        "Choose an option:\n1. Save image with the same name as the MP3 file\n2. Save image with the album name",
+        ["1", "2", "Back", "Quit"]
+    )
+
+    if option == "Back":
+        self.continue_processing(albums, cover_image_path)
+        return
+    elif option == "Quit":
+        self.root.destroy()
+        return
+
+    resize = self.custom_warning_box(
+        "Resize Image",
+        "Resize cover image to 240x240 for MECHEN 2.4\" screen MP3/MP4 player?",
+        ["Yes", "No", "Back", "Quit"]
+    )
+
+    if resize == "Back":
+        self.continue_processing(albums, cover_image_path)
+        return
+    elif resize == "Quit":
+        self.root.destroy()
+        return
+
+    self.embed_album_cover(self.mp3_folder, cover_image_path, selected_album, mp3_files, int(option), resize == "Yes")
+Ensure the Details Box is Shown After Embedding
+I'll update the embed_album_cover method to ensure the details box is shown after the embedding process:
+
+python
+Copy code
+def embed_album_cover(self, folder: str, cover_image_path: str, album_name: str, mp3_files: list, option: int, resize: bool = False) -> None:
+    """
+    Embeds the cover image into the MP3 files' metadata.
+
+    Parameters:
+    folder: str - Path to the folder containing MP3 files.
+    cover_image_path: str - Path to the cover image file.
+    album_name: str - Name of the album.
+    mp3_files: list - List of MP3 files in the album.
+    option: int - Option for saving the image (1: same name as MP3 file, 2: album name).
+    resize: bool - Whether to resize the cover image.
+
+    No Return
+    """
+    folder = os.path.normpath(folder)  # Normalize the path
+
+    if self.auto_save_embed:
+        album_images_folder = os.path.join(self.embed_folder, f"{album_name.lower()}_image")
+        os.makedirs(album_images_folder, exist_ok=True)
+    else:
+        album_images_folder = ""
+
+    if resize:
+        cover_image = self.resize_cover_image(cover_image_path)
+    else:
+        cover_image = Image.open(cover_image_path).convert("RGB")
+
+    jpeg_image_path = os.path.join(album_images_folder, "cover.jpg") if album_images_folder else None
+    if jpeg_image_path:
+        cover_image.save(jpeg_image_path, format='JPEG')
+
+    with io.BytesIO() as img_bytes:
+        cover_image.save(img_bytes, format='JPEG')
+        cover_data = img_bytes.getvalue()
+
+    updated_files = []
+
+    for mp3_file in mp3_files:
+        mp3_path = os.path.join(folder, mp3_file)
+        try:
+            audio = MP3(mp3_path, ID3=ID3)
+
+            if audio.tags is None:
+                audio.add_tags()
+
+            if 'TALB' in audio:
+                audio.tags['TALB'].encoding = 0
+            if 'TPE1' in audio:
+                audio.tags['TPE1'].encoding = 0
+            if 'TIT2' in audio:
+                audio.tags['TIT2'].encoding = 0
+
+            audio.tags.delall('APIC')
+
+            audio.tags.add(
+                APIC(
+                    encoding=0,
+                    mime='image/jpeg',
+                    type=0,
+                    desc='',
+                    data=cover_data
+                )
+            )
+
+            audio.save()
+            updated_files.append(mp3_path)
+
+        except (ID3Error, IOError, HeaderNotFoundError, ID3NoHeaderError) as e:
+            messagebox.showerror("Error", f"Error updating {mp3_file}: {e}")
+
+    pyperclip.copy(folder)  # Copy the normalized music folder address to the clipboard
+
+    self.show_details_window(updated_files, jpeg_image_path, album_name)
+
+def show_details_window(self, updated_files: list, embed_example_path: str, album_name: str) -> None:
+    """
+    Displays a details window with the list of updated files.
+
+    Parameters:
+    updated_files: list - List of updated MP3 files.
+    embed_example_path: str - Path to the embed example image.
+    album_name: str - Name of the album.
