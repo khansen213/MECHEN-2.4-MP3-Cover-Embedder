@@ -68,7 +68,7 @@ This tool is designed to embed album covers into the metadata of MP3 files speci
 - After clicking `Start Processing`, you will be prompted to select a cover image file.
 
 **Q3: Can I resize the cover image?**
-- Yes, you can choose to resize the cover image to 240x240 pixels during the embedding process.
+- Yes, you can choose to resize the cover image to 240x240 pixels during the embedding process or save it as its original (Keep in mind that the album cover will always be sqaure).
 
 **Q4: How do I view detailed instructions?**
 - Go to `Help` > `Instructions` for a detailed guide on using the program.
@@ -93,7 +93,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ### Authors
 
-- [Your Name]
+- Kaden Hansen
 - ChatGPT (OpenAI)
 
 For more information or support, please contact mp3.m4r.gitproject@gmail.com.
